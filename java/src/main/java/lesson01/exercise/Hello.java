@@ -1,10 +1,37 @@
 package lesson01.exercise;
+import io.opentracing.Span;
+import io.opentracing.Tracer;
+import io.opentracing.util.GlobalTracer;
+
+import io.jaegertracing.Configuration;
+import io.jaegertracing.Configuration.ReporterConfiguration;
+import io.jaegertracing.Configuration.SamplerConfiguration;
+import io.jaegertracing.internal.JaegerTracer;
+
+
 
 public class Hello {
 
+    private final Tracer tracer;
+
+    private Hello(Tracer tracer) {
+        this.tracer = tracer;
+    }
+
+    public static JaegerTracer initTracer(String service) {
+        SamplerConfiguration samplerConfig = SamplerConfiguration.fromEnv().withType("const").withParam(1);
+        ReporterConfiguration reporterConfig = ReporterConfiguration.fromEnv().withLogSpans(true);
+        Configuration config = new Configuration(service).withSampler(samplerConfig).withReporter(reporterConfig);
+        return config.getTracer();
+    }
+
     private void sayHello(String helloTo) {
+        Span span = tracer.buildSpan("say-hello").start();
+
         String helloStr = String.format("Hello, %s!", helloTo);
         System.out.println(helloStr);
+
+        span.finish();
     }
 
     public static void main(String[] args) {
@@ -12,6 +39,7 @@ public class Hello {
             throw new IllegalArgumentException("Expecting one argument");
         }
         String helloTo = args[0];
-        new Hello().sayHello(helloTo);
+        Tracer tracer = initTracer("hello-world");
+        new Hello(tracer).sayHello(helloTo);
     }
 }
