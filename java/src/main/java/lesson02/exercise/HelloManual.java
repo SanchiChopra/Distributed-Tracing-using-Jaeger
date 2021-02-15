@@ -7,11 +7,11 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import lib.Tracing;
 
-public class Hello {
+public class HelloManual {
 
     private final Tracer tracer;
 
-    private Hello(Tracer tracer) {
+    private HelloManual(Tracer tracer) {
         this.tracer = tracer;
     }
 
@@ -20,10 +20,7 @@ public class Hello {
         span.setTag("hello-to", helloTo);
 
         String helloStr = formatString(span, helloTo);
-
-        span.log(ImmutableMap.of("event", "string-format", "value", helloStr));
         printHello(span, helloStr);
-        span.log(ImmutableMap.of("event", "println"));
 
         span.finish();
     }
@@ -56,7 +53,7 @@ public class Hello {
 
         String helloTo = args[0];
         try (JaegerTracer tracer = Tracing.init("hello-world")) {
-            new Hello(tracer).sayHello(helloTo);
+            new HelloManual(tracer).sayHello(helloTo);
         }
     }
 }
