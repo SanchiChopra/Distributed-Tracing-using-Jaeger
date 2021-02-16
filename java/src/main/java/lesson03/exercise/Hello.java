@@ -1,6 +1,5 @@
 package lesson03.exercise;
 
-import java.io.IOException;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -8,15 +7,14 @@ import io.jaegertracing.internal.JaegerTracer;
 import io.opentracing.Scope;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
+import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import lib.Tracing;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import io.opentracing.log.Fields;
 import okhttp3.Response;
-
-import io.opentracing.propagation.Format;
-import io.opentracing.tag.Tags;
 
 public class Hello {
 
@@ -43,12 +41,12 @@ public class Hello {
             Request request = requestBuilder.build();
             Response response = client.newCall(request).execute();
 
-            Tags.HTTP_STATUS.set(tracer.activeSpan(), response.code());
+            Tags.HTTP_STATUS.set(activeSpan, response.code());
             if (response.code() != 200) {
                 throw new RuntimeException("Bad HTTP result: " + response);
             }
             return response.body().string();
-        } catch (IOException e) {
+        } catch (Exception e) {
             Tags.ERROR.set(tracer.activeSpan(), true);
             tracer.activeSpan().log(ImmutableMap.of(Fields.EVENT, "error", Fields.ERROR_OBJECT, e));
             throw new RuntimeException(e);
@@ -83,7 +81,7 @@ public class Hello {
         try (Scope scope = tracer.scopeManager().activate(span)) {
             getHttp(8082, "publish", "helloStr", helloStr);
             span.log(ImmutableMap.of("event", "println"));
-        } finally{
+        } finally {
             span.finish();
         }
     }

@@ -4,38 +4,42 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
+import com.google.common.collect.ImmutableMap;
 
 import io.dropwizard.Application;
 import io.dropwizard.Configuration;
 import io.dropwizard.setup.Environment;
-
-import java.util.HashMap;
-
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MultivaluedMap;
-
-import com.google.common.collect.ImmutableMap;
-
 import io.opentracing.Scope;
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
-import io.opentracing.propagation.TextMapAdapter;
-import io.opentracing.tag.Tags;
 import lib.Tracing;
 
 public class Publisher extends Application<Configuration> {
+
+    private final Tracer tracer;
+
+    private Publisher(Tracer tracer) {
+        this.tracer = tracer;
+    }
 
     @Path("/publish")
     @Produces(MediaType.TEXT_PLAIN)
     public class PublisherResource {
 
         @GET
-        public String format(@QueryParam("helloStr") String helloStr) {
-            System.out.println(helloStr);
-            return "published";
+        public String format(@QueryParam("helloStr") String helloStr, @Context HttpHeaders httpHeaders) {
+            Span span = Tracing.startServerSpan(tracer, httpHeaders, "publish");
+            try (Scope scope = tracer.scopeManager().activate(span)) {
+                System.out.println(helloStr);
+                span.log(ImmutableMap.of("event", "println", "value", helloStr));
+                return "published";
+            } finally {
+                span.finish();
+            }
         }
     }
 
@@ -47,6 +51,7 @@ public class Publisher extends Application<Configuration> {
     public static void main(String[] args) throws Exception {
         System.setProperty("dw.server.applicationConnectors[0].port", "8082");
         System.setProperty("dw.server.adminConnectors[0].port", "9082");
-        new Publisher().run(args);
+
+        new Publisher(Tracing.init("publisher")).run(args);
     }
 }
