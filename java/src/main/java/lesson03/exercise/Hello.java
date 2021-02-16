@@ -15,6 +15,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
+import io.opentracing.propagation.Format;
+import io.opentracing.tag.Tags;
+
 public class Hello {
 
     private final Tracer tracer;
@@ -30,6 +33,13 @@ public class Hello {
             HttpUrl url = new HttpUrl.Builder().scheme("http").host("localhost").port(port).addPathSegment(path)
                     .addQueryParameter(param, value).build();
             Request.Builder requestBuilder = new Request.Builder().url(url);
+
+            Span activeSpan = tracer.activeSpan();
+            Tags.SPAN_KIND.set(activeSpan, Tags.SPAN_KIND_CLIENT);
+            Tags.HTTP_METHOD.set(activeSpan, "GET");
+            Tags.HTTP_URL.set(activeSpan, url.toString());
+            tracer.inject(activeSpan.context(), Format.Builtin.HTTP_HEADERS, new RequestBuilderCarrier(requestBuilder));
+
             Request request = requestBuilder.build();
             Response response = client.newCall(request).execute();
 
@@ -39,6 +49,8 @@ public class Hello {
             }
             return response.body().string();
         } catch (IOException e) {
+            Tags.ERROR.set(tracer.activeSpan(), true);
+            tracer.activeSpan().log(ImmutableMap.of(Fields.EVENT, "error", Fields.ERROR_OBJECT, e));
             throw new RuntimeException(e);
         }
     }

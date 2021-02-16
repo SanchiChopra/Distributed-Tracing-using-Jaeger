@@ -10,6 +10,22 @@ import io.dropwizard.Application;
 import io.dropwizard.Configuration;
 import io.dropwizard.setup.Environment;
 
+import java.util.HashMap;
+
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
+
+import com.google.common.collect.ImmutableMap;
+
+import io.opentracing.Scope;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMapAdapter;
+import io.opentracing.tag.Tags;
+import lib.Tracing;
+
 public class Publisher extends Application<Configuration> {
 
     @Path("/publish")
